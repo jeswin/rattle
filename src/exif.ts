@@ -1,32 +1,24 @@
-import exif from "exif-js";
+import { ExifImage } from 'exif';
+import { promisify } from 'util';
 
-// Function to get exif data for a file
-const getExifData = async (filePath: string): Promise<any> => {
-  return new Promise((resolve, reject) => {
-    // Create an image element
-    const img = new Image();
+// Function to get the exif data for a file
+export async function getExifData(filePath: string): Promise<any> {
+  try {
+    // Promisify the ExifImage constructor
+    const ExifImagePromise = promisify(ExifImage);
 
-    // Set the source of the image to the file path
-    img.src = filePath;
+    // Create a new ExifImage instance with the file path
+    const exifData = await ExifImagePromise({ image: filePath });
 
-    // Event listener to handle when the image has loaded
-    img.onload = function () {
-      // Get the exif data using exif-js library
-      const exifData = exif.getData(this);
+    // Return the exif data
+    return exifData;
+  } catch (error) {
+    // If there is no exif data, return undefined
+    if (error.code === 'NO_EXIF_SEGMENT') {
+      return undefined;
+    }
 
-      // Check if exif data exists
-      if (exifData) {
-        resolve(exifData);
-      } else {
-        resolve(undefined);
-      }
-    };
-
-    // Event listener to handle any errors while loading the image
-    img.onerror = function () {
-      reject(new Error("Failed to load image"));
-    };
-  });
-};
-
-export default getExifData;
+    // Throw the error if it's not related to missing exif data
+    throw error;
+  }
+}

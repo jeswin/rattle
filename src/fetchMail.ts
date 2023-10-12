@@ -1,17 +1,13 @@
-import { promisify } from 'util';
 import { simpleParser } from 'mailparser';
-import { connect } from 'node-poplib';
-import { saveEmail, sendReply } from './emailFunctions';
+import { connect } from 'node-poplib-yahoo';
+import { saveEmail, sendReply } from './emailUtils';
 
-// Function to fetch and process emails
-async function fetchEmails() {
+const fetchMail = async () => {
   try {
-    // Get environment variables
     const emailId = process.env.RATTLE_EMAIL_ID;
     const mailServer = process.env.RATTLE_MAILSERVER;
     const emailPassword = process.env.RATTLE_EMAIL_PASSWORD;
 
-    // Check if any of the environment variables are missing
     if (!emailId) {
       console.error('RATTLE_EMAIL_ID environment variable is missing');
       return;
@@ -25,63 +21,38 @@ async function fetchEmails() {
       return;
     }
 
-    // Connect to POP3 mail server
     const client = connect({
       hostname: mailServer,
       port: 995,
       tls: true,
       username: emailId,
-      password: emailPassword
+      password: emailPassword,
     });
 
-    // Promisify client methods
-    const connectAsync = promisify(client.connect.bind(client));
-    const listAsync = promisify(client.list.bind(client));
-    const retrieveAsync = promisify(client.retrieve.bind(client));
-    const deleteAsync = promisify(client.delete.bind(client));
-    const quitAsync = promisify(client.quit.bind(client));
+    await client.connect();
 
-    // Connect to mail server
-    await connectAsync();
+    const count = await client.listCount();
+    for (let i = 1; i <= count; i++) {
+      const email = await client.retr(i);
+      const parsedEmail = await simpleParser(email);
 
-    // Get list of emails
-    const emailList = await listAsync();
+      const attachments = parsedEmail.attachments || [];
+      const attachment = attachments[0];
 
-    // Iterate through each email
-    for (const email of emailList) {
-      // Retrieve email content
-      const emailContent = await retrieveAsync(email.msgId);
-
-      // Parse email using mailparser
-      const parsedEmail = await simpleParser(emailContent);
-
-      // Check if email has attachments
-      if (parsedEmail.attachments.length > 0) {
-        const attachment = parsedEmail.attachments[0];
-
-        // Check if attachment size is greater than RATTLE_MAX_ATTACHMENT_MB
-        const maxAttachmentSize = process.env.RATTLE_MAX_ATTACHMENT_MB || 10;
-        if (attachment.size > maxAttachmentSize * 1024 * 1024) {
-          // Send reply if attachment size is too big
-          await sendReply(parsedEmail.subject, 'Sorry. The attachment was too big. Discarded.');
-        } else {
-          // Save email and delete from server
-          await saveEmail(parsedEmail.subject, parsedEmail.text, [attachment]);
-          await deleteAsync(email.msgId);
-        }
-      } else {
-        // Save email and delete from server
-        await saveEmail(parsedEmail.subject, parsedEmail.text, []);
-        await deleteAsync(email.msgId);
+      if (attachment && attachment.size > process.env.RATTLE_MAX_ATTACHMENT_MB * 1024 * 1024) {
+        await sendReply('Rattle: The attachment was too big. Discarded.', `Your attachment should be at most ${process.env.RATTLE_MAX_ATTACHMENT_MB} MB in size. Right now we handle only jpegs.\n\nCheers.`);
+        continue;
       }
+
+      await saveEmail(parsedEmail.subject, parsedEmail.text, attachments);
+
+      await client.dele(i);
     }
 
-    // Quit connection to mail server
-    await quitAsync();
+    await client.quit();
   } catch (error) {
-    console.error('Error occurred while fetching emails:', error);
+    console.error('An error occurred while fetching and processing emails:', error);
   }
-}
+};
 
-// Call fetchEmails function
-fetchEmails();
+fetchMail();

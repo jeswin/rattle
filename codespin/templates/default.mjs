@@ -32,13 +32,20 @@ function withPromptDiff(args) {
       ) +
       printPromptDiff(args) +
       printLine(
-        "Based on the changes to the prompt, regenerate the source code."
+        "Based on the changes to the prompt, regenerate the source code. Retain the original code and structure wherever possible."
       ) +
       printFileTemplate(args)
     );
   } else {
     return (
+      (args.targetFilePath
+        ? printLine(
+            `From the following prompt (enclosed between "-----"), generate source code for the file ${args.targetFilePath}.`,
+            true
+          ) + printLine("-----", true)
+        : "") +
       printPrompt(args, false) +
+      printLine("-----", true) +
       printIncludeFiles(args, false, false) +
       printFileTemplate(args)
     );
@@ -46,13 +53,20 @@ function withPromptDiff(args) {
 }
 function withoutPromptDiff(args) {
   return (
+    (args.targetFilePath
+      ? printLine(
+          `From the following prompt (enclosed between "-----"), generate source code for the file ${args.targetFilePath}.`,
+          true
+        ) + printLine("-----", true)
+      : "") +
     printPrompt(args, false) +
+    printLine("-----", true) +
     printIncludeFiles(args, false, false) +
     printFileTemplate(args)
   );
 }
 function printLine(line, addBlankLine = false) {
-  return line + (addBlankLine ? "\n" + "\n" : "\n");
+  return line + (!line.endsWith("\n") ? "\n" : "") + (addBlankLine ? "\n" : "");
 }
 function printPrompt(args, useLineNumbers) {
   return printLine(
@@ -70,15 +84,18 @@ function printPromptDiff(args) {
   return printLine(args.promptDiff, true);
 }
 function printFileTemplate(args) {
+  const filePath = args.targetFilePath
+    ? args.targetFilePath
+    : "./some/path/filename.ext";
   const a = `
   Respond with just the code (but exclude invocation examples etc) in the following format:
 
-  $START_FILE_CONTENTS:./some/path/filename.ext$
+  $START_FILE_CONTENTS:${filePath}$
   import a from "./a";
   function somethingSomething() {
     //....
   }
-  $END_FILE_CONTENTS:./some/path/filename.ext$
+  $END_FILE_CONTENTS:${filePath}$
   `;
   return fixTemplateWhitespace(a);
 }
