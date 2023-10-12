@@ -1,0 +1,26 @@
+{
+  "name": "rattle",
+  "version": "0.0.1",
+  "description": "An Art Gallery",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeswin/rattle.git"
+  },
+  "keywords": [
+    "Gallery"
+  ],
+  "author": "jeswinpk@agilehead.com",
+  "license": "AGPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/jeswin/rattle/issues"
+  },
+  "homepage": "https://github.com/jeswin/rattle#readme",
+  "dependencies": {
+    "@types/node": "^20.8.4",
+    "typescript": "^5.2.2"
+  }
+}
