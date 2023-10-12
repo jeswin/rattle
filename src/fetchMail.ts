@@ -7,6 +7,7 @@ const fetchMail = async () => {
     const emailId = process.env.RATTLE_EMAIL_ID;
     const mailServer = process.env.RATTLE_MAILSERVER;
     const emailPassword = process.env.RATTLE_EMAIL_PASSWORD;
+    const maxAttachmentSize = process.env.RATTLE_MAX_ATTACHMENT_MB || 10;
 
     if (!emailId) {
       console.error('RATTLE_EMAIL_ID environment variable is missing');
@@ -39,8 +40,8 @@ const fetchMail = async () => {
       const attachments = parsedEmail.attachments || [];
       const attachment = attachments[0];
 
-      if (attachment && attachment.size > process.env.RATTLE_MAX_ATTACHMENT_MB * 1024 * 1024) {
-        await sendReply('Rattle: The attachment was too big. Discarded.', `Your attachment should be at most ${process.env.RATTLE_MAX_ATTACHMENT_MB} MB in size. Right now we handle only jpegs.\n\nCheers.`);
+      if (attachment && attachment.size > maxAttachmentSize * 1024 * 1024) {
+        await sendReply('Rattle: The attachment was too big. Discarded.', `Your attachment should be at most ${maxAttachmentSize} MB in size. Right now we handle only jpegs.\n\nCheers.`);
         continue;
       }
 
